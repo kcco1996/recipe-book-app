@@ -130,6 +130,7 @@ input[type="range"]::-moz-range-thumb {
       <span class="email" id="userEmail">Not signed in</span>
       <button id="signInBtn" class="secondary">Sign in with Google</button>
       <button id="signOutBtn" class="secondary" style="display:none">Sign out</button>
+      <button id="migrateBtn" class="secondary btn" style="display:none">Migrate Local → Firebase</button>
     </div>
   </div>
 </header>
@@ -294,53 +295,37 @@ const firebaseConfig = {
    *******************/
   let firebaseApp, auth, provider, db, user = null;
 
-  async function initFirebaseIfEnabled(){
-    if(!USING_FIREBASE) return;
-    // Firebase v11 modular CDN
-    const [
-      { initializeApp },
-      { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged },
-      { getFirestore, collection, getDocs, setDoc, doc, updateDoc, deleteDoc }
-    ] = await Promise.all([
-      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
-      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"),
-      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"), // loaded above but we’ll destructure once
-      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js")
-    ]).then(([appMod, authMod1, authMod2, fsMod])=>{
-      // merge exports to keep code readable
-      return [
-        { initializeApp: appMod.initializeApp },
-        {
-          getAuth: authMod1.getAuth,
-          GoogleAuthProvider: authMod1.GoogleAuthProvider,
-          signInWithPopup: authMod1.signInWithPopup,
-          signOut: authMod1.signOut,
-          onAuthStateChanged: authMod1.onAuthStateChanged
-        },
-        { getFirestore: fsMod.getFirestore, collection: fsMod.collection, getDocs: fsMod.getDocs,
-          setDoc: fsMod.setDoc, doc: fsMod.doc, updateDoc: fsMod.updateDoc, deleteDoc: fsMod.deleteDoc }
-      ];
-    });
+ async function initFirebaseIfEnabled(){
+  if(!USING_FIREBASE) return;
 
+  // Load only the required SDKs
+  const [
+    { initializeApp },
+    { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged },
+    { getFirestore, collection, getDocs, setDoc, doc, updateDoc, deleteDoc }
+  ] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js")
+  ]);
 
-    firebaseApp = initializeApp(firebaseConfig);
-    auth = getAuth(firebaseApp);
-    provider = new GoogleAuthProvider();
-    db = getFirestore(firebaseApp);
+  // Initialise Firebase
+  firebaseApp = initializeApp(firebaseConfig);
+  auth = getAuth(firebaseApp);
+  provider = new GoogleAuthProvider();
+  db = getFirestore(firebaseApp);
 
-    // attach helpers to global scope we closed over above
-    window.__fb = { getDocs: (await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js")).getDocs };
+  // Make everything globally available for signIn/signOut later
+  window.__firebaseAuth = { signInWithPopup, signOut, GoogleAuthProvider, auth };
+  window.__firebaseFns = { collection, getDocs, setDoc, doc, updateDoc, deleteDoc };
 
-    auth.onAuthStateChanged((u)=>{
-      user = u || null;
-      updateAuthUI();
-      if(user){ loadAllRecipes(); } else { loadAllRecipes(); } // still loads local if no auth
-    });
-
-    // keep methods for CRUD later
-    window.__firebaseFns = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
-    window.__firebaseAuth = { signInWithPopup, signOut, GoogleAuthProvider };
-  }
+  // Monitor auth state
+  onAuthStateChanged(auth, async (u)=>{
+    user = u || null;
+    updateAuthUI();
+    await loadAllRecipes();
+  });
+}
 
   /********************
    * DATA & ADAPTERS  *
@@ -735,29 +720,60 @@ slider.oninput = () => {
     if(current && current.id === data.id){ openDrawer(allRecipes.find(x=>x.id===data.id)); }
   }
 
+  const migrateBtn = document.getElementById("migrateBtn");
+
+migrateBtn.addEventListener("click", async ()=>{
+  if(!user || !db){
+    alert("Sign in with Google first.");
+    return;
+  }
+
+  const localData = getLocal();
+  if(!localData || !localData.length){
+    alert("No local recipes found to migrate.");
+    return;
+  }
+
+  const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+
+  for(const r of localData){
+    await setDoc(doc(db, "users", user.uid, "recipes", r.id), r);
+  }
+
+  alert(`Migrated ${localData.length} recipes to your Firestore account.`);
+  await loadAllRecipes();
+});
+
   /*************
    * AUTH UI   *
    *************/
-  function updateAuthUI(){
-    if(USING_FIREBASE && user){
-      el.userEmail.textContent = user.email || "Signed in";
-      el.signIn.style.display = "none";
-      el.signOut.style.display = "inline-block";
-    } else {
-      el.userEmail.textContent = USING_FIREBASE ? "Not signed in" : "Local mode";
-      el.signIn.style.display = USING_FIREBASE ? "inline-block" : "none";
-      el.signOut.style.display = "none";
-    }
+function updateAuthUI(){
+  if(USING_FIREBASE && user){
+    el.userEmail.textContent = user.email || "Signed in";
+    el.signIn.style.display = "none";
+    el.signOut.style.display = "inline-block";
+    document.getElementById("migrateBtn").style.display = "inline-block"; // show migrate button
+  } else {
+    el.userEmail.textContent = USING_FIREBASE ? "Not signed in" : "Local mode";
+    el.signIn.style.display = USING_FIREBASE ? "inline-block" : "none";
+    el.signOut.style.display = "none";
+    document.getElementById("migrateBtn").style.display = "none"; // hide when signed out
   }
-
-  async function handleSignIn(){
-    if(!USING_FIREBASE){ alert("Enable Firebase first: set USING_FIREBASE=true and paste your config."); return; }
-    const { signInWithPopup, GoogleAuthProvider } = window.__firebaseAuth || {};
-    if(!signInWithPopup){ alert("Firebase not loaded yet."); return; }
-    try{
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    }catch(e){ alert("Sign-in failed: " + e.message); }
+}
+async function handleSignIn(){
+  if(!USING_FIREBASE){ 
+    alert("Firebase disabled — set USING_FIREBASE=true to enable Auth."); 
+    return; 
   }
+  try {
+    const { signInWithPopup, GoogleAuthProvider, auth } = window.__firebaseAuth;
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    console.error(e);
+    alert("Google sign-in failed: " + e.message);
+  }
+}
   async function handleSignOut(){
     if(!USING_FIREBASE){ return; }
     try{
