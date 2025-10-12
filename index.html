@@ -89,6 +89,33 @@
       .cols{grid-template-columns:1fr}
       .modal-grid{grid-template-columns:1fr}
     }
+
+    /* Slider styling */
+input[type="range"] {
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--brand) 0%, var(--brand) 0%, #2a2e3a 0%, #2a2e3a 100%);
+  outline: none;
+  transition: background 0.3s;
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid #fff2;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid #fff2;
+  cursor: pointer;
+}
   </style>
 </head>
 <body>
@@ -115,7 +142,7 @@
     </select>
     <select id="typeFilter">
       <option value="">All types</option>
-      <option>Breakfast</option><option>Starter</option><option>Main</option><option>Dessert</option><option>Hot Drink</option><option>Cold Drink</option>
+      <option>Breakfast</option><option>Lunch</option><option>Starter</option><option>Main</option><option>Dessert</option><option>Hot Drink</option><option>Cold Drink</option>
     </select>
     <input id="applianceFilter" placeholder="Filter by appliance (e.g., Air Fryer)" />
     <button id="addBtn" class="btn">Add Recipe</button>
@@ -140,14 +167,23 @@
       <button id="d_close" class="secondary btn">Close</button>
     </div>
 
-    <div class="cols">
-      <div class="section">
-        <h3>Ingredients</h3>
-        <table id="d_ingredients"><thead><tr><th>Item</th><th>Qty</th></tr></thead><tbody></tbody></table>
-      </div>
+<div class="section">
+  <div class="row" style="align-items:center;justify-content:space-between">
+    <h3 style="margin:0">Ingredients</h3>
+    <div class="row" style="gap:6px;font-size:14px">
+      <label for="servingsSlider" class="muted">Servings:</label>
+      <input type="range" id="servingsSlider" min="1" max="10" value="1" step="1" style="width:120px">
+      <span id="servingsLabel">1</span>
+    </div>
+  </div>
+  <table id="d_ingredients">
+    <thead><tr><th>Item</th><th>Qty</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
       <div class="section">
         <h3>Method</h3>
-        <div id="d_method" class="muted"></div>
+        <ol id="d_method" class="muted" style="padding-left:20px"></ol>
       </div>
     </div>
 
@@ -197,7 +233,7 @@
       <div>
         <label>Type
           <select id="f_type">
-            <option>Breakfast</option><option>Starter</option><option selected>Main</option><option>Dessert</option><option>Hot Drink</option><option>Cold Drink</option>
+            <option>Breakfast</option><option>Lunch</option><option>Starter</option><option selected>Main</option><option>Dessert</option><option>Hot Drink</option><option>Cold Drink</option>
           </select>
         </label>
       </div>
@@ -248,7 +284,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDSl7Us_67A1OJmmIF-qboEURS_Ywl9QTE",
   authDomain: "recipebookapp-b78c8.firebaseapp.com",
   projectId: "recipebookapp-b78c8",
-  storageBucket: "recipebookapp-b78c8.firebasestorage.app",
+  storageBucket: "recipebookapp-b78c8.appspot.com",
   messagingSenderId: "1025780360687",
   appId: "1:1025780360687:web:71030859a064df77ac421a"
 };
@@ -286,15 +322,6 @@ const firebaseConfig = {
       ];
     });
 
-    // 🔐 Paste your Firebase config here and set USING_FIREBASE = true.
-    const firebaseConfig = {
-      apiKey: "PASTE_ME",
-      authDomain: "PASTE_ME",
-      projectId: "PASTE_ME",
-      storageBucket: "PASTE_ME",
-      messagingSenderId: "PASTE_ME",
-      appId: "PASTE_ME"
-    };
 
     firebaseApp = initializeApp(firebaseConfig);
     auth = getAuth(firebaseApp);
@@ -555,7 +582,12 @@ const firebaseConfig = {
     el.d_country.textContent = `${flagForCountry(r.country)} ${r.country||"Unknown"}`;
     el.d_type.textContent = r.type||"";
     el.d_ing.innerHTML = (r.ingredients||[]).map(i=>`<tr><td>${i.item}</td><td>${i.qty||""}</td></tr>`).join("");
-    el.d_method.textContent = r.method||"";
+    if (r.method.includes("1.") || r.method.includes("\n")) {
+  const steps = r.method.split(/\n\d+\.\s*/).filter(s => s.trim());
+  el.d_method.innerHTML = steps.map(s => `<li>${s.trim()}</li>`).join("");
+} else {
+  el.d_method.textContent = r.method || "";
+}
     el.d_appliances.innerHTML = (r.appliances||[]).map(a=>`<span class="pill">${a}</span>`).join("");
     // rating stars (interactive)
     el.d_stars.innerHTML = "";
@@ -573,6 +605,7 @@ const firebaseConfig = {
       el.d_stars.appendChild(b);
     }
     el.d_notes.value = r.notes || "";
+    setupServingsSlider(r);
     el.drawer.classList.add("open");
     el.drawer.setAttribute("aria-hidden","false");
   }
@@ -581,6 +614,8 @@ const firebaseConfig = {
     el.drawer.classList.remove("open");
     el.drawer.setAttribute("aria-hidden","true");
   }
+
+  
 
   function clearModal(){
     draftId = null;
@@ -614,6 +649,52 @@ const firebaseConfig = {
       el.f_appliances.appendChild(lbl);
     });
   }
+
+  // Serving size adjustment
+let baseIngredients = [];
+let currentServings = 1;
+
+function setupServingsSlider(recipe){
+  const slider = document.getElementById("servingsSlider");
+  const label = document.getElementById("servingsLabel");
+  const tbody = document.getElementById("d_ingredients").querySelector("tbody");
+
+  baseIngredients = recipe.ingredients || [];
+  currentServings = 1;
+  slider.value = 1;
+  label.textContent = "1";
+
+  slider.style.background = `linear-gradient(to right, var(--brand) 0%, #2a2e3a 0%)`;
+
+  // Reset quantities to base when opened
+  renderIngredientsTable(baseIngredients);
+
+slider.oninput = () => {
+  const scale = parseFloat(slider.value);
+  label.textContent = scale;
+  const percent = ((scale - slider.min) / (slider.max - slider.min)) * 100;
+  slider.style.background = `linear-gradient(to right, var(--brand) ${percent}%, #2a2e3a ${percent}%)`;
+
+  const scaled = baseIngredients.map(i => {
+    const num = parseFloat(i.qty);
+    if(!isNaN(num)){
+      const unit = i.qty.replace(num, "").trim();
+      return {
+        ...i,
+        qty: (num * scale).toFixed(num % 1 === 0 ? 0 : 1) + (unit ? " " + unit : "")
+      };
+    }
+    return i;
+  });
+  renderIngredientsTable(scaled);
+};
+
+
+  function renderIngredientsTable(list){
+    tbody.innerHTML = list.map(i=>`<tr><td>${i.item}</td><td>${i.qty}</td></tr>`).join("");
+  }
+}
+
 
   function addIngRow(){ addIngRowWith({item:"",qty:""}); }
   function addIngRowWith(obj){
