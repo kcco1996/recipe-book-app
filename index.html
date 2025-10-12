@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Global Recipe Book</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1115; --card:#171a21; --muted:#99a2b2; --text:#eef2f7;
+      --brand:#6ea8fe; --accent:#9df0ae; --danger:#ff6b6b; --border:#262b36;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    header{
+      position:sticky;top:0;z-index:10;background:rgba(15,17,21,.9);backdrop-filter: blur(6px);
+      border-bottom:1px solid var(--border)
+    }
+    .bar{
+      max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between
+    }
+    .title{display:flex;gap:10px;align-items:center;font-weight:700}
+    .title .logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--brand),var(--accent));display:inline-block}
+    .auth{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+    .auth button{background:#1f2430;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}
+    .auth .email{opacity:.8}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .filters{
+      display:grid;grid-template-columns:1fr 180px 180px 1fr auto;gap:10px;margin:12px 0 18px
+    }
+    input, select, textarea{
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#12151c;color:var(--text);
+    }
+    .btn{
+      padding:10px 14px;border-radius:10px;background:var(--brand);border:1px solid #3a5fb5;color:#051028;font-weight:700;cursor:pointer
+    }
+    .btn.secondary{background:#1f2430;border-color:var(--border);color:var(--text)}
+    .btn.danger{background:var(--danger);border-color:#cc5252;color:#160a0a}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{padding:4px 8px;border-radius:999px;background:#1b2130;border:1px solid var(--border);font-size:12px;color:var(--muted)}
+    .grid{
+      display:grid;grid-template-columns:repeat( auto-fill, minmax(240px,1fr) );gap:14px
+    }
+    .card{
+      background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column
+    }
+    .thumb{aspect-ratio: 16/9;background:#0c0e13;display:flex;align-items:center;justify-content:center;font-size:48px}
+    .card .body{padding:12px}
+    .flag{font-size:18px;margin-right:8px}
+    .name{font-weight:700;margin:2px 0}
+    .muted{color:var(--muted);font-size:13px}
+    .stars{display:flex;gap:2px;margin-top:6px}
+    .stars button{background:transparent;border:none;cursor:pointer;font-size:18px}
+    .row{display:flex;gap:8px;align-items:center}
+    .spacer{flex:1}
+    .card footer{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px}
+    .drawer{
+      position:fixed;inset:auto 0 0 0;background:#0e1118;border-top:1px solid var(--border);
+      transform: translateY(100%);transition:.28s ease;z-index:20;max-height:85vh;overflow:auto
+    }
+    .drawer.open{transform: translateY(0)}
+    .drawer .inner{max-width:900px;margin:0 auto;padding:16px}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .section{background:#12151b;border:1px solid var(--border);border-radius:12px;padding:12px}
+    h3{margin:6px 0 10px}
+    table{width:100%;border-collapse:collapse}
+    th, td{border-bottom:1px solid var(--border);padding:8px;text-align:left}
+    .note{min-height:72px}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#1b2130;border:1px solid var(--border);font-size:12px;margin-right:6px}
+    .footerbar{display:flex;gap:8px;align-items:center;margin-top:12px}
+    .empty{padding:40px;text-align:center;color:var(--muted)}
+    /* modal */
+    dialog{
+      border:none;border-radius:14px;background:var(--card);color:var(--text);padding:0;max-width:720px;width:96%;
+      box-shadow:0 10px 40px rgba(0,0,0,.4);border:1px solid var(--border)
+    }
+    dialog::backdrop{background:rgba(0,0,0,.6)}
+    .modal-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .modal-body{padding:14px 16px}
+    .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .ingredients-rows{display:grid;gap:8px}
+    .row2{display:grid;grid-template-columns:2fr 1fr auto;gap:8px}
+    .appliances{display:flex;gap:8px;flex-wrap:wrap}
+    .appliances label{display:flex;gap:6px;align-items:center;background:#12151b;border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:13px;cursor:pointer}
+    .modal-actions{padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+    .hint{color:var(--muted);font-size:12px}
+    .kebab{background:transparent;border:none;color:var(--muted);cursor:pointer}
+    @media (max-width:820px){
+      .filters{grid-template-columns:1fr 1fr 1fr 1fr auto}
+      .cols{grid-template-columns:1fr}
+      .modal-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="title">
+      <span class="logo"></span>
+      <span>Global Recipe Book</span>
+    </div>
+    <div class="auth">
+      <span class="email" id="userEmail">Not signed in</span>
+      <button id="signInBtn" class="secondary">Sign in with Google</button>
+      <button id="signOutBtn" class="secondary" style="display:none">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="filters">
+    <input id="searchInput" placeholder="Search recipes or ingredients…" />
+    <select id="countryFilter">
+      <option value="">All countries</option>
+    </select>
+    <select id="typeFilter">
+      <option value="">All types</option>
+      <option>Breakfast</option><option>Starter</option><option>Main</option><option>Dessert</option><option>Hot Drink</option><option>Cold Drink</option>
+    </select>
+    <input id="applianceFilter" placeholder="Filter by appliance (e.g., Air Fryer)" />
+    <button id="addBtn" class="btn">Add Recipe</button>
+  </div>
+
+  <div id="chips" class="chips"></div>
+
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">No recipes yet. Add your first one!</div>
+</div>
+
+<!-- Drawer (detail view) -->
+<div id="drawer" class="drawer" aria-hidden="true">
+  <div class="inner">
+    <div class="row">
+      <h2 id="d_name" style="margin:4px 0 10px"></h2>
+      <span class="pill" id="d_country"></span>
+      <span class="pill" id="d_type"></span>
+      <div class="spacer"></div>
+      <button id="d_edit" class="secondary btn">Edit</button>
+      <button id="d_delete" class="danger btn">Delete</button>
+      <button id="d_close" class="secondary btn">Close</button>
+    </div>
+
+    <div class="cols">
+      <div class="section">
+        <h3>Ingredients</h3>
+        <table id="d_ingredients"><thead><tr><th>Item</th><th>Qty</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="section">
+        <h3>Method</h3>
+        <div id="d_method" class="muted"></div>
+      </div>
+    </div>
+
+    <div class="footerbar">
+      <div class="row" id="d_appliances_row">
+        <span class="muted">Appliances:</span>
+        <div id="d_appliances" class="chips"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="row">
+        <span class="muted">Your rating:</span>
+        <div id="d_stars" class="stars"></div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top:12px">
+      <h3>Your Notes</h3>
+      <textarea id="d_notes" class="note" placeholder="What worked? Any tweaks next time?"></textarea>
+      <div class="row" style="margin-top:8px">
+        <div class="spacer"></div>
+        <button id="d_saveNotes" class="btn">Save Notes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add/Edit -->
+<dialog id="modal">
+  <div class="modal-head">
+    <h3 id="modalTitle" style="margin:0">Add Recipe</h3>
+    <div class="spacer"></div>
+    <button class="kebab" id="modalClose">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="modal-grid">
+      <div>
+        <label>Dish name
+          <input id="f_name" placeholder="e.g., Beef and Guinness Pie" />
+        </label>
+      </div>
+      <div>
+        <label>Country
+          <input id="f_country" list="countriesList" placeholder="e.g., Ireland" />
+          <datalist id="countriesList"></datalist>
+        </label>
+      </div>
+      <div>
+        <label>Type
+          <select id="f_type">
+            <option>Breakfast</option><option>Starter</option><option selected>Main</option><option>Dessert</option><option>Hot Drink</option><option>Cold Drink</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label>Image (URL, optional)
+          <input id="f_image" placeholder="https://..." />
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label>Description (optional)
+        <input id="f_desc" placeholder="Short blurb about the dish…" />
+      </label>
+    </div>
+
+    <div style="margin-top:12px">
+      <div class="muted" style="margin-bottom:6px">Appliances</div>
+      <div class="appliances" id="f_appliances"></div>
+      <div class="hint">Tip: You can add custom appliances later in the filter box to tag recipes.</div>
+    </div>
+
+    <div class="section" style="margin-top:12px">
+      <h3 style="margin-top:0">Ingredients</h3>
+      <div id="ingredientsRows" class="ingredients-rows"></div>
+      <button id="addIngRow" class="secondary btn" style="margin-top:8px">+ Add Row</button>
+    </div>
+
+    <div class="section" style="margin-top:12px">
+      <h3 style="margin-top:0">Method</h3>
+      <textarea id="f_method" rows="6" placeholder="Step-by-step instructions…"></textarea>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button id="modalCancel" class="secondary btn">Cancel</button>
+    <button id="modalSave" class="btn">Save</button>
+  </div>
+</dialog>
+
+<script type="module">
+  /*******************
+   * CONFIG SWITCHES *
+   *******************/
+  const USING_FIREBASE = false; // <- set to true when you paste your firebaseConfig below.
+
+  /*******************
+   * FIREBASE (opt.) *
+   *******************/
+  let firebaseApp, auth, provider, db, user = null;
+
+  async function initFirebaseIfEnabled(){
+    if(!USING_FIREBASE) return;
+    // Firebase v11 modular CDN
+    const [
+      { initializeApp },
+      { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged },
+      { getFirestore, collection, getDocs, setDoc, doc, updateDoc, deleteDoc }
+    ] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"), // loaded above but we’ll destructure once
+      import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js")
+    ]).then(([appMod, authMod1, authMod2, fsMod])=>{
+      // merge exports to keep code readable
+      return [
+        { initializeApp: appMod.initializeApp },
+        {
+          getAuth: authMod1.getAuth,
+          GoogleAuthProvider: authMod1.GoogleAuthProvider,
+          signInWithPopup: authMod1.signInWithPopup,
+          signOut: authMod1.signOut,
+          onAuthStateChanged: authMod1.onAuthStateChanged
+        },
+        { getFirestore: fsMod.getFirestore, collection: fsMod.collection, getDocs: fsMod.getDocs,
+          setDoc: fsMod.setDoc, doc: fsMod.doc, updateDoc: fsMod.updateDoc, deleteDoc: fsMod.deleteDoc }
+      ];
+    });
+
+    // 🔐 Paste your Firebase config here and set USING_FIREBASE = true.
+    const firebaseConfig = {
+      apiKey: "PASTE_ME",
+      authDomain: "PASTE_ME",
+      projectId: "PASTE_ME",
+      storageBucket: "PASTE_ME",
+      messagingSenderId: "PASTE_ME",
+      appId: "PASTE_ME"
+    };
+
+    firebaseApp = initializeApp(firebaseConfig);
+    auth = getAuth(firebaseApp);
+    provider = new GoogleAuthProvider();
+    db = getFirestore(firebaseApp);
+
+    // attach helpers to global scope we closed over above
+    window.__fb = { getDocs: (await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js")).getDocs };
+
+    auth.onAuthStateChanged((u)=>{
+      user = u || null;
+      updateAuthUI();
+      if(user){ loadAllRecipes(); } else { loadAllRecipes(); } // still loads local if no auth
+    });
+
+    // keep methods for CRUD later
+    window.__firebaseFns = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+    window.__firebaseAuth = { signInWithPopup, signOut, GoogleAuthProvider };
+  }
+
+  /********************
+   * DATA & ADAPTERS  *
+   ********************/
+  // Recipe schema:
+  // { id, name, country, type, image, desc, appliances[], ingredients[{item,qty}], method, rating(0-5), notes }
+
+  // Some seed examples (aligned to your preferences)
+  const seed = [
+    {
+      id: crypto.randomUUID(), name:"Steak & Guinness Pie", country:"Ireland", type:"Main",
+      image:"", desc:"Rich, slow-cooked beef in a malty stout gravy, topped with flaky pastry.",
+      appliances:["Oven"], ingredients:[
+        {item:"Beef chuck", qty:"800g"}, {item:"Guinness", qty:"440ml"}, {item:"Onion", qty:"2"},
+        {item:"Mushrooms", qty:"200g"}, {item:"Puff pastry", qty:"1 sheet"}
+      ],
+      method:"Brown beef, soften onions/mushrooms, add Guinness and simmer till tender. Transfer to dish, top with pastry, bake until golden.",
+      rating:5, notes:"Lovely with mashed potatoes."
+    },
+    {
+      id: crypto.randomUUID(), name:"Welsh Rarebit", country:"United Kingdom", type:"Starter",
+      image:"", desc:"Cheesy ale-topped toast, hot and savoury.",
+      appliances:["Grill","Oven"], ingredients:[
+        {item:"Mature cheddar", qty:"200g"}, {item:"English ale", qty:"60ml"}, {item:"Mustard", qty:"1 tsp"},
+        {item:"Worcestershire sauce", qty:"1 tsp"}, {item:"Thick bread", qty:"4 slices"}
+      ],
+      method:"Melt cheese with ale, mustard, and Worcestershire; spoon onto toasted bread; grill until bubbling.",
+      rating:4, notes:"Add a dash of paprika."
+    },
+    {
+      id: crypto.randomUUID(), name:"Sticky Toffee Pudding", country:"United Kingdom", type:"Dessert",
+      image:"", desc:"Warm date sponge drowned in toffee sauce.",
+      appliances:["Oven"], ingredients:[
+        {item:"Dates", qty:"200g"}, {item:"Self-raising flour", qty:"200g"}, {item:"Butter", qty:"100g"},
+        {item:"Brown sugar", qty:"150g"}, {item:"Cream", qty:"200ml"}
+      ],
+      method:"Bake date sponge; simmer butter, sugar, and cream for toffee; pour generously over warm pudding.",
+      rating:5, notes:"Serve with custard."
+    }
+  ];
+
+  const LS_KEY = "recipeBook.v1";
+  function getLocal(){
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw){ localStorage.setItem(LS_KEY, JSON.stringify(seed)); return seed.slice(); }
+    try{ return JSON.parse(raw); }catch{ return seed.slice(); }
+  }
+  function setLocal(arr){ localStorage.setItem(LS_KEY, JSON.stringify(arr)); }
+
+  /** Data source abstraction — switches between LocalStorage and Firestore **/
+  const store = {
+    async list(){
+      if(USING_FIREBASE && user && db){
+        // Firestore: /users/{uid}/recipes
+        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+        const snap = await getDocs(collection(db, "users", user.uid, "recipes"));
+        const out = [];
+        snap.forEach(doc => out.push(doc.data()));
+        return out;
+      }
+      return getLocal();
+    },
+    async upsert(recipe){
+      if(!recipe.id) recipe.id = crypto.randomUUID();
+      if(USING_FIREBASE && user && db){
+        const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+        await setDoc(doc(db, "users", user.uid, "recipes", recipe.id), recipe);
+        return;
+      }
+      const arr = getLocal();
+      const i = arr.findIndex(r => r.id === recipe.id);
+      if(i >= 0) arr[i] = recipe; else arr.push(recipe);
+      setLocal(arr);
+    },
+    async remove(id){
+      if(USING_FIREBASE && user && db){
+        const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+        await deleteDoc(doc(db, "users", user.uid, "recipes", id));
+        return;
+      }
+      const arr = getLocal().filter(r => r.id !== id);
+      setLocal(arr);
+    },
+    async patch(id, partial){
+      if(USING_FIREBASE && user && db){
+        const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+        await updateDoc(doc(db, "users", user.uid, "recipes", id), partial);
+        return;
+      }
+      const arr = getLocal();
+      const i = arr.findIndex(r => r.id === id);
+      if(i >= 0){ arr[i] = {...arr[i], ...partial}; setLocal(arr); }
+    }
+  };
+
+  /******************
+   * UI CONTROLLERS *
+   ******************/
+  const el = {
+    grid: document.getElementById("grid"),
+    empty: document.getElementById("empty"),
+    search: document.getElementById("searchInput"),
+    country: document.getElementById("countryFilter"),
+    type: document.getElementById("typeFilter"),
+    appliance: document.getElementById("applianceFilter"),
+    chips: document.getElementById("chips"),
+    addBtn: document.getElementById("addBtn"),
+    userEmail: document.getElementById("userEmail"),
+    signIn: document.getElementById("signInBtn"),
+    signOut: document.getElementById("signOutBtn"),
+    // drawer
+    drawer: document.getElementById("drawer"),
+    d_name: document.getElementById("d_name"),
+    d_country: document.getElementById("d_country"),
+    d_type: document.getElementById("d_type"),
+    d_ing: document.getElementById("d_ingredients").querySelector("tbody"),
+    d_method: document.getElementById("d_method"),
+    d_appliances: document.getElementById("d_appliances"),
+    d_stars: document.getElementById("d_stars"),
+    d_notes: document.getElementById("d_notes"),
+    d_saveNotes: document.getElementById("d_saveNotes"),
+    d_edit: document.getElementById("d_edit"),
+    d_delete: document.getElementById("d_delete"),
+    d_close: document.getElementById("d_close"),
+    // modal
+    modal: document.getElementById("modal"),
+    modalTitle: document.getElementById("modalTitle"),
+    modalClose: document.getElementById("modalClose"),
+    modalCancel: document.getElementById("modalCancel"),
+    modalSave: document.getElementById("modalSave"),
+    f_name: document.getElementById("f_name"),
+    f_country: document.getElementById("f_country"),
+    f_type: document.getElementById("f_type"),
+    f_image: document.getElementById("f_image"),
+    f_desc: document.getElementById("f_desc"),
+    f_method: document.getElementById("f_method"),
+    f_appliances: document.getElementById("f_appliances"),
+    ingRows: document.getElementById("ingredientsRows"),
+    addIngRow: document.getElementById("addIngRow"),
+    countriesList: document.getElementById("countriesList")
+  };
+
+  let allRecipes = [];
+  let current = null; // selected recipe in drawer
+  let draftId = null; // for edit mode
+
+  const DEFAULT_APPLIANCES = ["Oven","Air Fryer","Microwave","Slow Cooker","Toaster","Grill","Blender","Rice Cooker","Sandwich Toaster","Coffee Maker"];
+
+  function flagForCountry(country){
+    // lightweight mapping: use emojis broadly associated with regions
+    const c = (country||"").toLowerCase();
+    if(c.includes("united kingdom") || c==="uk" || c.includes("england") || c.includes("scotland") || c.includes("wales")) return "🇬🇧";
+    if(c.includes("ireland")) return "🇮🇪";
+    if(c.includes("france")) return "🇫🇷";
+    if(c.includes("germany")) return "🇩🇪";
+    if(c.includes("italy")) return "🇮🇹";
+    if(c.includes("spain")) return "🇪🇸";
+    if(c.includes("poland")) return "🇵🇱";
+    if(c.includes("japan")) return "🇯🇵";
+    if(c.includes("united states") || c.includes("usa")) return "🇺🇸";
+    return "🌍";
+  }
+
+  function countrySet(recipes){
+    return [...new Set(recipes.map(r => r.country).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  }
+
+  function syncCountryFilters(){
+    const countries = countrySet(allRecipes);
+    el.country.innerHTML = `<option value="">All countries</option>` + countries.map(c=>`<option>${c}</option>`).join("");
+    el.countriesList.innerHTML = countries.map(c=>`<option value="${c}"></option>`).join("");
+    // chips
+    el.chips.innerHTML = countries.slice(0, 12).map(c=> `<span class="chip">${flagForCountry(c)} ${c}</span>`).join("");
+  }
+
+  function cardHTML(r){
+    const flag = flagForCountry(r.country);
+    const rating = "★".repeat(r.rating||0) + "☆".repeat(5-(r.rating||0));
+    const img = r.image ? `<img src="${r.image}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.closest('.thumb').textContent='🍽️'">` : "🍽️";
+    return `
+      <article class="card" data-id="${r.id}">
+        <div class="thumb">${img}</div>
+        <div class="body">
+          <div class="row">
+            <div class="name">${r.name}</div>
+            <div class="spacer"></div>
+            <span class="muted">${r.type||""}</span>
+          </div>
+          <div class="muted"><span class="flag">${flag}</span>${r.country||"Unknown"}</div>
+          <div class="stars" aria-label="Rating">${rating.split("").map(s=>`<span>${s}</span>`).join("")}</div>
+        </div>
+        <footer>
+          <button class="secondary btn view">View</button>
+          <button class="secondary btn edit">Edit</button>
+        </footer>
+      </article>
+    `;
+  }
+
+  function renderGrid(list){
+    el.grid.innerHTML = list.map(cardHTML).join("");
+    el.empty.style.display = list.length ? "none" : "block";
+  }
+
+  function applyFilters(){
+    const q = el.search.value.trim().toLowerCase();
+    const c = el.country.value;
+    const t = el.type.value;
+    const a = el.appliance.value.trim().toLowerCase();
+
+    const filtered = allRecipes.filter(r=>{
+      if(c && r.country !== c) return false;
+      if(t && r.type !== t) return false;
+      if(a && !(r.appliances||[]).some(x => x.toLowerCase().includes(a))) return false;
+      if(q){
+        const text = [
+          r.name, r.country, r.type, r.desc, r.method,
+          ...(r.ingredients||[]).map(i=>i.item+" "+i.qty)
+        ].join(" ").toLowerCase();
+        if(!text.includes(q)) return false;
+      }
+      return true;
+    });
+
+    renderGrid(filtered);
+  }
+
+  async function loadAllRecipes(){
+    allRecipes = await store.list();
+    // sort by name
+    allRecipes.sort((a,b)=>a.name.localeCompare(b.name));
+    syncCountryFilters();
+    applyFilters();
+  }
+
+  function openDrawer(r){
+    current = r;
+    el.d_name.textContent = r.name || "";
+    el.d_country.textContent = `${flagForCountry(r.country)} ${r.country||"Unknown"}`;
+    el.d_type.textContent = r.type||"";
+    el.d_ing.innerHTML = (r.ingredients||[]).map(i=>`<tr><td>${i.item}</td><td>${i.qty||""}</td></tr>`).join("");
+    el.d_method.textContent = r.method||"";
+    el.d_appliances.innerHTML = (r.appliances||[]).map(a=>`<span class="pill">${a}</span>`).join("");
+    // rating stars (interactive)
+    el.d_stars.innerHTML = "";
+    for(let i=1;i<=5;i++){
+      const b = document.createElement("button");
+      b.textContent = (i <= (r.rating||0)) ? "★" : "☆";
+      b.title = `Rate ${i}`;
+      b.addEventListener("click", async ()=>{
+        await store.patch(r.id, { rating:i });
+        const idx = allRecipes.findIndex(x=>x.id===r.id);
+        if(idx>=0){ allRecipes[idx].rating=i; }
+        openDrawer({...r, rating:i});
+        applyFilters();
+      });
+      el.d_stars.appendChild(b);
+    }
+    el.d_notes.value = r.notes || "";
+    el.drawer.classList.add("open");
+    el.drawer.setAttribute("aria-hidden","false");
+  }
+  function closeDrawer(){
+    current = null;
+    el.drawer.classList.remove("open");
+    el.drawer.setAttribute("aria-hidden","true");
+  }
+
+  function clearModal(){
+    draftId = null;
+    el.f_name.value = ""; el.f_country.value=""; el.f_type.value="Main"; el.f_image.value="";
+    el.f_desc.value=""; el.f_method.value="";
+    el.ingRows.innerHTML = ""; addIngRow(); addIngRow();
+    // appliance chips with toggles
+    renderApplianceChips([]);
+  }
+  function fillModal(r){
+    draftId = r.id;
+    el.f_name.value = r.name||""; el.f_country.value = r.country||""; el.f_type.value = r.type||"Main";
+    el.f_image.value = r.image||""; el.f_desc.value = r.desc||""; el.f_method.value = r.method||"";
+    el.ingRows.innerHTML = "";
+    (r.ingredients||[{item:"",qty:""}]).forEach(addIngRowWith);
+    renderApplianceChips(r.appliances||[]);
+  }
+
+  function renderApplianceChips(selected){
+    el.f_appliances.innerHTML = "";
+    const known = new Set([ ...DEFAULT_APPLIANCES, ...selected ]);
+    [...known].forEach(name=>{
+      const id = "appl_" + name.replace(/\s+/g,"_");
+      const lbl = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = id; cb.checked = selected.includes(name);
+      cb.dataset.appliance = name;
+      lbl.appendChild(cb);
+      const span = document.createElement("span"); span.textContent = name;
+      lbl.appendChild(span);
+      el.f_appliances.appendChild(lbl);
+    });
+  }
+
+  function addIngRow(){ addIngRowWith({item:"",qty:""}); }
+  function addIngRowWith(obj){
+    const wrap = document.createElement("div");
+    wrap.className = "row2";
+    wrap.innerHTML = `
+      <input placeholder="Ingredient" value="${obj.item||""}">
+      <input placeholder="Qty" value="${obj.qty||""}">
+      <button class="secondary btn removeRow">−</button>
+    `;
+    wrap.querySelector(".removeRow").addEventListener("click", ()=>{ wrap.remove(); });
+    el.ingRows.appendChild(wrap);
+  }
+
+  function collectModalData(){
+    const name = el.f_name.value.trim();
+    const country = el.f_country.value.trim();
+    const type = el.f_type.value;
+    const image = el.f_image.value.trim();
+    const desc = el.f_desc.value.trim();
+    const method = el.f_method.value.trim();
+    const ingredients = [...el.ingRows.children].map(row=>{
+      const [i,q] = row.querySelectorAll("input");
+      return { item: i.value.trim(), qty: q.value.trim() };
+    }).filter(r => r.item);
+    const appliances = [...el.f_appliances.querySelectorAll('input[type="checkbox"]')]
+      .filter(cb=>cb.checked).map(cb=>cb.dataset.appliance);
+    return { id: draftId || null, name, country, type, image, desc, method, ingredients, appliances, rating:0, notes:"" };
+  }
+
+  async function saveModal(){
+    const data = collectModalData();
+    if(!data.name){ alert("Please enter a dish name."); return; }
+    if(!data.country){ alert("Please enter a country."); return; }
+    await store.upsert(data);
+    await loadAllRecipes();
+    el.modal.close();
+    if(current && current.id === data.id){ openDrawer(allRecipes.find(x=>x.id===data.id)); }
+  }
+
+  /*************
+   * AUTH UI   *
+   *************/
+  function updateAuthUI(){
+    if(USING_FIREBASE && user){
+      el.userEmail.textContent = user.email || "Signed in";
+      el.signIn.style.display = "none";
+      el.signOut.style.display = "inline-block";
+    } else {
+      el.userEmail.textContent = USING_FIREBASE ? "Not signed in" : "Local mode";
+      el.signIn.style.display = USING_FIREBASE ? "inline-block" : "none";
+      el.signOut.style.display = "none";
+    }
+  }
+
+  async function handleSignIn(){
+    if(!USING_FIREBASE){ alert("Enable Firebase first: set USING_FIREBASE=true and paste your config."); return; }
+    const { signInWithPopup, GoogleAuthProvider } = window.__firebaseAuth || {};
+    if(!signInWithPopup){ alert("Firebase not loaded yet."); return; }
+    try{
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    }catch(e){ alert("Sign-in failed: " + e.message); }
+  }
+  async function handleSignOut(){
+    if(!USING_FIREBASE){ return; }
+    try{
+      await (await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js")).signOut(auth);
+    }catch(e){ alert("Sign-out failed: " + e.message); }
+  }
+
+  /*************
+   * HANDLERS  *
+   *************/
+  el.search.addEventListener("input", applyFilters);
+  el.country.addEventListener("change", applyFilters);
+  el.type.addEventListener("change", applyFilters);
+  el.appliance.addEventListener("input", applyFilters);
+  el.addBtn.addEventListener("click", ()=>{
+    clearModal(); el.modalTitle.textContent = "Add Recipe"; el.modal.showModal();
+  });
+
+  el.modalClose.addEventListener("click", ()=> el.modal.close());
+  el.modalCancel.addEventListener("click", ()=> el.modal.close());
+  el.modalSave.addEventListener("click", saveModal);
+  el.addIngRow.addEventListener("click", addIngRow);
+
+  el.signIn.addEventListener("click", handleSignIn);
+  el.signOut.addEventListener("click", handleSignOut);
+
+  el.grid.addEventListener("click", (ev)=>{
+    const card = ev.target.closest(".card");
+    if(!card) return;
+    const id = card.dataset.id;
+    const r = allRecipes.find(x=>x.id===id);
+    if(!r) return;
+    if(ev.target.classList.contains("view")) openDrawer(r);
+    if(ev.target.classList.contains("edit")){ fillModal(r); el.modalTitle.textContent="Edit Recipe"; el.modal.showModal(); }
+  });
+
+  el.d_close.addEventListener("click", closeDrawer);
+  el.d_edit.addEventListener("click", ()=>{ if(current){ fillModal(current); el.modalTitle.textContent="Edit Recipe"; el.modal.showModal(); }});
+  el.d_delete.addEventListener("click", async ()=>{
+    if(current && confirm(`Delete "${current.name}"?`)){
+      await store.remove(current.id);
+      closeDrawer();
+      await loadAllRecipes();
+    }
+  });
+  el.d_saveNotes.addEventListener("click", async ()=>{
+    if(!current) return;
+    const notes = el.d_notes.value;
+    await store.patch(current.id, { notes });
+    const i = allRecipes.findIndex(x=>x.id===current.id);
+    if(i>=0) allRecipes[i].notes = notes;
+    alert("Notes saved.");
+  });
+
+  // click outside drawer to close
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape"){ if(el.modal.open) el.modal.close(); else if(el.drawer.classList.contains("open")) closeDrawer(); }});
+
+  // initial boot
+  (async function boot(){
+    await initFirebaseIfEnabled();
+    updateAuthUI();
+    await loadAllRecipes();
+  })();
+</script>
+</body>
+</html>
