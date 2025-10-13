@@ -354,38 +354,57 @@ const firebaseConfig = {
 async list(){
   if (USING_FIREBASE && db) {
     const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
-
-    // ✅ Always read from your folder — even when not signed in
-    const userId = user?.uid || "JI83p8FEQFaQs6WfIJDIhhnaIx22";
+    // Load public recipes by default, private if signed in
+    const userId = user?.uid || "JI03p8FEQFaQs6WfIJDIhhnaIx22";
     const snap = await getDocs(collection(db, "users", userId, "recipes"));
     const out = [];
     snap.forEach(doc => out.push(doc.data()));
     return out;
   }
-
   return getLocal();
 },
-    async upsert(recipe){
-      if(!recipe.id) recipe.id = crypto.randomUUID();
-      if(USING_FIREBASE && user && db){
-        const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
-        await setDoc(doc(db, "users", user.uid, "recipes", recipe.id), recipe);
-        return;
-      }
-      const arr = getLocal();
-      const i = arr.findIndex(r => r.id === recipe.id);
-      if(i >= 0) arr[i] = recipe; else arr.push(recipe);
-      setLocal(arr);
-    },
-    async remove(id){
-      if(USING_FIREBASE && user && db){
-        const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
-        await deleteDoc(doc(db, "users", user.uid, "recipes", id));
-        return;
-      }
-      const arr = getLocal().filter(r => r.id !== id);
-      setLocal(arr);
-    },
+async upsert(recipe){
+  if (!recipe.id) recipe.id = crypto.randomUUID();
+  if (USING_FIREBASE && db) {
+    const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+
+    // Save to private folder (if signed in)
+    if (user) {
+      await setDoc(doc(db, "users", user.uid, "recipes", recipe.id), recipe);
+    }
+
+    // Always mirror to public folder
+    await setDoc(doc(db, "users", "JI03p8FEQFaQs6WfIJDIhhnaIx22", "recipes", recipe.id), recipe);
+
+    return;
+  }
+
+  // Local fallback
+  const arr = getLocal();
+  const i = arr.findIndex(r => r.id === recipe.id);
+  if (i >= 0) arr[i] = recipe; else arr.push(recipe);
+  setLocal(arr);
+},
+
+async remove(id){
+  if (USING_FIREBASE && db) {
+    const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+
+    // Delete from private (if signed in)
+    if (user) {
+      await deleteDoc(doc(db, "users", user.uid, "recipes", id));
+    }
+
+    // Always delete from public folder
+    await deleteDoc(doc(db, "users", "JI03p8FEQFaQs6WfIJDIhhnaIx22", "recipes", id));
+
+    return;
+  }
+
+  const arr = getLocal().filter(r => r.id !== id);
+  setLocal(arr);
+},
+
     async patch(id, partial){
       if(USING_FIREBASE && user && db){
         const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
