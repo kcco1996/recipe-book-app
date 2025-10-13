@@ -351,17 +351,20 @@ const firebaseConfig = {
 
   /** Data source abstraction — switches between LocalStorage and Firestore **/
   const store = {
-    async list(){
-      if(USING_FIREBASE && user && db){
-        // Firestore: /users/{uid}/recipes
-        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
-        const snap = await getDocs(collection(db, "users", user.uid, "recipes"));
-        const out = [];
-        snap.forEach(doc => out.push(doc.data()));
-        return out;
-      }
-      return getLocal();
-    },
+async list(){
+  if (USING_FIREBASE && db) {
+    const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
+
+    // ✅ Always read from your folder — even when not signed in
+    const userId = user?.uid || "JI83p8FEQFaQs6WfIJDIhhnaIx22";
+    const snap = await getDocs(collection(db, "users", userId, "recipes"));
+    const out = [];
+    snap.forEach(doc => out.push(doc.data()));
+    return out;
+  }
+
+  return getLocal();
+},
     async upsert(recipe){
       if(!recipe.id) recipe.id = crypto.randomUUID();
       if(USING_FIREBASE && user && db){
