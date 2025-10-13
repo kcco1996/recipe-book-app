@@ -470,22 +470,83 @@ async remove(id){
 
   const DEFAULT_APPLIANCES = ["Oven","Air Fryer","Microwave","Slow Cooker","Toaster","Grill","Blender","Rice Cooker","Sandwich Toaster","Coffee Maker"];
 
-  function flagForCountry(country){
-    // lightweight mapping: use emojis broadly associated with regions
-    const c = (country||"").toLowerCase();
-    if(c.includes("united kingdom") || c==="uk" || c.includes("england") || c.includes("scotland") || c.includes("wales")) return "🇬🇧";
-    if(c.includes("ireland")) return "🇮🇪";
-    if(c.includes("france")) return "🇫🇷";
-    if(c.includes("germany")) return "🇩🇪";
-    if(c.includes("italy")) return "🇮🇹";
-    if(c.includes("spain")) return "🇪🇸";
-    if(c.includes("poland")) return "🇵🇱";
-    if(c.includes("japan")) return "🇯🇵";
-    if (c.includes("pakistan")) return "🇵🇰";
-    if (c.includes("thailand")) return "🇹🇭";
-    if(c.includes("united states") || c.includes("usa")) return "🇺🇸";
-    return "🌍";
-  }
+function flagForCountry(country) {
+  if (!country) return "🌍";
+  const c = country.toLowerCase().trim();
+
+  const flags = {
+    // --- British Isles ---
+    "united kingdom": "🇬🇧", "england": "🇬🇧", "scotland": "🏴", "wales": "🏴", "northern ireland": "🇬🇧",
+    "ireland": "🇮🇪",
+
+    // --- Western Europe ---
+    "france": "🇫🇷", "germany": "🇩🇪", "switzerland": "🇨🇭", "austria": "🇦🇹",
+    "belgium": "🇧🇪", "netherlands": "🇳🇱", "luxembourg": "🇱🇺",
+
+    // --- Southern Europe ---
+    "italy": "🇮🇹", "spain": "🇪🇸", "portugal": "🇵🇹", "greece": "🇬🇷", "cyprus": "🇨🇾", "malta": "🇲🇹",
+
+    // --- Northern Europe ---
+    "sweden": "🇸🇪", "norway": "🇳🇴", "finland": "🇫🇮", "denmark": "🇩🇰", "iceland": "🇮🇸",
+
+    // --- Central & Eastern Europe ---
+    "poland": "🇵🇱", "czech republic": "🇨🇿", "slovakia": "🇸🇰", "hungary": "🇭🇺",
+    "croatia": "🇭🇷", "slovenia": "🇸🇮", "serbia": "🇷🇸", "bosnia": "🇧🇦",
+    "montenegro": "🇲🇪", "romania": "🇷🇴", "bulgaria": "🇧🇬", "ukraine": "🇺🇦",
+    "estonia": "🇪🇪", "latvia": "🇱🇻", "lithuania": "🇱🇹",
+
+    // --- Russia & Caucasus ---
+    "russia": "🇷🇺", "georgia": "🇬🇪", "armenia": "🇦🇲", "azerbaijan": "🇦🇿",
+
+    // --- Middle East ---
+    "turkey": "🇹🇷", "israel": "🇮🇱", "jordan": "🇯🇴", "saudi arabia": "🇸🇦",
+    "qatar": "🇶🇦", "united arab emirates": "🇦🇪", "uae": "🇦🇪",
+    "kuwait": "🇰🇼", "oman": "🇴🇲", "bahrain": "🇧🇭",
+
+    // --- Africa ---
+    "morocco": "🇲🇦", "egypt": "🇪🇬", "ethiopia": "🇪🇹", "kenya": "🇰🇪",
+    "tanzania": "🇹🇿", "south africa": "🇿🇦", "namibia": "🇳🇦",
+
+    // --- Asia ---
+    "china": "🇨🇳", "mongolia": "🇲🇳", "north korea": "🇰🇵", "south korea": "🇰🇷",
+    "japan": "🇯🇵", "taiwan": "🇹🇼", "vietnam": "🇻🇳", "laos": "🇱🇦",
+    "cambodia": "🇰🇭", "thailand": "🇹🇭", "myanmar": "🇲🇲", "malaysia": "🇲🇾",
+    "singapore": "🇸🇬", "indonesia": "🇮🇩", "philippines": "🇵🇭",
+    "india": "🇮🇳", "nepal": "🇳🇵", "sri lanka": "🇱🇰", "bangladesh": "🇧🇩",
+    "pakistan": "🇵🇰",
+
+    // --- Oceania ---
+    "australia": "🇦🇺", "new zealand": "🇳🇿", "french polynesia": "🇵🇫",
+
+    // --- North America ---
+    "united states": "🇺🇸", "usa": "🇺🇸", "canada": "🇨🇦", "mexico": "🇲🇽",
+
+    // --- Central & South America ---
+    "colombia": "🇨🇴", "venezuela": "🇻🇪", "ecuador": "🇪🇨", "peru": "🇵🇪",
+    "bolivia": "🇧🇴", "chile": "🇨🇱", "argentina": "🇦🇷", "brazil": "🇧🇷",
+    "uruguay": "🇺🇾", "paraguay": "🇵🇾",
+
+    // --- Caribbean ---
+    "jamaica": "🇯🇲", "cuba": "🇨🇺", "dominican republic": "🇩🇴",
+    "puerto rico": "🇵🇷", "barbados": "🇧🇧", "bahamas": "🇧🇸",
+    "trinidad and tobago": "🇹🇹"
+  };
+
+  // Try direct match first
+  if (flags[c]) return flags[c];
+
+  // Try partial match (handles e.g. “Republic of Korea”, “Kingdom of Thailand”)
+  const found = Object.keys(flags).find(key => c.includes(key));
+  return found ? flags[found] : "🌍";
+}
+
+      // Try direct match first
+  if (flags[c]) return flags[c];
+
+  // Try partial match (handles “Kingdom of Thailand”, “Republic of Korea”)
+  const found = Object.keys(flags).find(key => c.includes(key));
+  return found ? flags[found] : "🌍";
+}
 
   function countrySet(recipes){
     return [...new Set(recipes.map(r => r.country).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
