@@ -470,7 +470,9 @@ async remove(id){
 
   const DEFAULT_APPLIANCES = ["Oven","Air Fryer","Microwave","Slow Cooker","Toaster","Grill","Blender","Rice Cooker","Sandwich Toaster","Coffee Maker"];
 
-function flagForCountry(country) {
+
+
+  function flagForCountry(country) {
   if (!country) return "🌍";
   const c = country.toLowerCase().trim();
 
@@ -535,22 +537,15 @@ function flagForCountry(country) {
   // Try direct match first
   if (flags[c]) return flags[c];
 
-  // Try partial match (handles e.g. “Republic of Korea”, “Kingdom of Thailand”)
-  const found = Object.keys(flags).find(key => c.includes(key));
-  return found ? flags[found] : "🌍";
-}
-
-      // Try direct match first
-  if (flags[c]) return flags[c];
-
   // Try partial match (handles “Kingdom of Thailand”, “Republic of Korea”)
   const found = Object.keys(flags).find(key => c.includes(key));
   return found ? flags[found] : "🌍";
 }
 
-  function countrySet(recipes){
-    return [...new Set(recipes.map(r => r.country).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  }
+function countrySet(recipes){
+  return [...new Set(recipes.map(r => r.country).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b));
+}
 
   function syncCountryFilters(){
     const countries = countrySet(allRecipes);
