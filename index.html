@@ -335,44 +335,18 @@ const firebaseConfig = {
 
   // Some seed examples (aligned to your preferences)
   const seed = [
-    {
-      id: crypto.randomUUID(), name:"Steak & Guinness Pie", country:"Ireland", type:"Main",
-      image:"", desc:"Rich, slow-cooked beef in a malty stout gravy, topped with flaky pastry.",
-      appliances:["Oven"], ingredients:[
-        {item:"Beef chuck", qty:"800g"}, {item:"Guinness", qty:"440ml"}, {item:"Onion", qty:"2"},
-        {item:"Mushrooms", qty:"200g"}, {item:"Puff pastry", qty:"1 sheet"}
-      ],
-      method:"Brown beef, soften onions/mushrooms, add Guinness and simmer till tender. Transfer to dish, top with pastry, bake until golden.",
-      rating:5, notes:"Lovely with mashed potatoes."
-    },
-    {
-      id: crypto.randomUUID(), name:"Welsh Rarebit", country:"United Kingdom", type:"Starter",
-      image:"", desc:"Cheesy ale-topped toast, hot and savoury.",
-      appliances:["Grill","Oven"], ingredients:[
-        {item:"Mature cheddar", qty:"200g"}, {item:"English ale", qty:"60ml"}, {item:"Mustard", qty:"1 tsp"},
-        {item:"Worcestershire sauce", qty:"1 tsp"}, {item:"Thick bread", qty:"4 slices"}
-      ],
-      method:"Melt cheese with ale, mustard, and Worcestershire; spoon onto toasted bread; grill until bubbling.",
-      rating:4, notes:"Add a dash of paprika."
-    },
-    {
-      id: crypto.randomUUID(), name:"Sticky Toffee Pudding", country:"United Kingdom", type:"Dessert",
-      image:"", desc:"Warm date sponge drowned in toffee sauce.",
-      appliances:["Oven"], ingredients:[
-        {item:"Dates", qty:"200g"}, {item:"Self-raising flour", qty:"200g"}, {item:"Butter", qty:"100g"},
-        {item:"Brown sugar", qty:"150g"}, {item:"Cream", qty:"200ml"}
-      ],
-      method:"Bake date sponge; simmer butter, sugar, and cream for toffee; pour generously over warm pudding.",
-      rating:5, notes:"Serve with custard."
-    }
+
   ];
 
   const LS_KEY = "recipeBook.v1";
-  function getLocal(){
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw){ localStorage.setItem(LS_KEY, JSON.stringify(seed)); return seed.slice(); }
-    try{ return JSON.parse(raw); }catch{ return seed.slice(); }
+ function getLocal(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw){ 
+    localStorage.setItem(LS_KEY, JSON.stringify([])); 
+    return []; 
   }
+  try{ return JSON.parse(raw); }catch{ return []; }
+}
   function setLocal(arr){ localStorage.setItem(LS_KEY, JSON.stringify(arr)); }
 
   /** Data source abstraction — switches between LocalStorage and Firestore **/
@@ -500,30 +474,38 @@ const firebaseConfig = {
     // chips
     el.chips.innerHTML = countries.slice(0, 12).map(c=> `<span class="chip">${flagForCountry(c)} ${c}</span>`).join("");
   }
+function cardHTML(r){
+  const flag = flagForCountry(r.country);
+  const rating = "★".repeat(r.rating||0) + "☆".repeat(5-(r.rating||0));
+  const img = r.image 
+    ? `<img src="${r.image}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.closest('.thumb').textContent='🍽️'">` 
+    : "🍽️";
 
-  function cardHTML(r){
-    const flag = flagForCountry(r.country);
-    const rating = "★".repeat(r.rating||0) + "☆".repeat(5-(r.rating||0));
-    const img = r.image ? `<img src="${r.image}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.closest('.thumb').textContent='🍽️'">` : "🍽️";
-    return `
-      <article class="card" data-id="${r.id}">
-        <div class="thumb">${img}</div>
-        <div class="body">
-          <div class="row">
-            <div class="name">${r.name}</div>
-            <div class="spacer"></div>
-            <span class="muted">${r.type||""}</span>
-          </div>
-          <div class="muted"><span class="flag">${flag}</span>${r.country||"Unknown"}</div>
-          <div class="stars" aria-label="Rating">${rating.split("").map(s=>`<span>${s}</span>`).join("")}</div>
+  // Only show Edit button if user is signed in
+  const editButton = (user && user.email) 
+    ? `<button class="secondary btn edit">Edit</button>` 
+    : "";
+
+  // Hide Add button from signed-out users (already handled in updateAuthUI)
+  return `
+    <article class="card" data-id="${r.id}">
+      <div class="thumb">${img}</div>
+      <div class="body">
+        <div class="row">
+          <div class="name">${r.name}</div>
+          <div class="spacer"></div>
+          <span class="muted">${r.type||""}</span>
         </div>
-        <footer>
-          <button class="secondary btn view">View</button>
-          <button class="secondary btn edit">Edit</button>
-        </footer>
-      </article>
-    `;
-  }
+        <div class="muted"><span class="flag">${flag}</span>${r.country||"Unknown"}</div>
+        <div class="stars" aria-label="Rating">${rating.split("").map(s=>`<span>${s}</span>`).join("")}</div>
+      </div>
+      <footer>
+        <button class="secondary btn view">View</button>
+        ${editButton}
+      </footer>
+    </article>
+  `;
+}
 
   function renderGrid(list){
     el.grid.innerHTML = list.map(cardHTML).join("");
@@ -750,13 +732,13 @@ migrateBtn.addEventListener("click", async ()=>{
 function updateAuthUI() {
   const isSignedIn = USING_FIREBASE && user;
 
-  // --- Update top bar ---
+  // Top bar buttons
   el.userEmail.textContent = isSignedIn ? (user.email || "Signed in") : "Not signed in";
   el.signIn.style.display  = isSignedIn ? "none" : "inline-block";
   el.signOut.style.display = isSignedIn ? "inline-block" : "none";
   document.getElementById("migrateBtn").style.display = isSignedIn ? "inline-block" : "none";
 
-  // --- Hide editing controls when signed out ---
+  // Hide editing elements when signed out
   const editingAllowed = !!isSignedIn;
   el.addBtn.style.display       = editingAllowed ? "inline-block" : "none";
   el.d_edit.style.display       = editingAllowed ? "inline-block" : "none";
@@ -764,7 +746,7 @@ function updateAuthUI() {
   el.d_saveNotes.style.display  = editingAllowed ? "inline-block" : "none";
   el.d_notes.disabled           = !editingAllowed;
 
-  // --- Show a notice for guests ---
+  // Add a view-only banner
   let banner = document.getElementById("viewOnlyBanner");
   if (!banner) {
     banner = document.createElement("div");
