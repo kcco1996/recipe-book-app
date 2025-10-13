@@ -747,19 +747,43 @@ migrateBtn.addEventListener("click", async ()=>{
   /*************
    * AUTH UI   *
    *************/
-function updateAuthUI(){
-  if(USING_FIREBASE && user){
-    el.userEmail.textContent = user.email || "Signed in";
-    el.signIn.style.display = "none";
-    el.signOut.style.display = "inline-block";
-    document.getElementById("migrateBtn").style.display = "inline-block"; // show migrate button
-  } else {
-    el.userEmail.textContent = USING_FIREBASE ? "Not signed in" : "Local mode";
-    el.signIn.style.display = USING_FIREBASE ? "inline-block" : "none";
-    el.signOut.style.display = "none";
-    document.getElementById("migrateBtn").style.display = "none"; // hide when signed out
+function updateAuthUI() {
+  const isSignedIn = USING_FIREBASE && user;
+
+  // --- Update top bar ---
+  el.userEmail.textContent = isSignedIn ? (user.email || "Signed in") : "Not signed in";
+  el.signIn.style.display  = isSignedIn ? "none" : "inline-block";
+  el.signOut.style.display = isSignedIn ? "inline-block" : "none";
+  document.getElementById("migrateBtn").style.display = isSignedIn ? "inline-block" : "none";
+
+  // --- Hide editing controls when signed out ---
+  const editingAllowed = !!isSignedIn;
+  el.addBtn.style.display       = editingAllowed ? "inline-block" : "none";
+  el.d_edit.style.display       = editingAllowed ? "inline-block" : "none";
+  el.d_delete.style.display     = editingAllowed ? "inline-block" : "none";
+  el.d_saveNotes.style.display  = editingAllowed ? "inline-block" : "none";
+  el.d_notes.disabled           = !editingAllowed;
+
+  // --- Show a notice for guests ---
+  let banner = document.getElementById("viewOnlyBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "viewOnlyBanner";
+    banner.style.cssText = `
+      background:#1e2636;
+      color:#9df0ae;
+      text-align:center;
+      padding:8px 0;
+      border-bottom:1px solid #333;
+      font-size:14px;
+      display:none;
+    `;
+    banner.textContent = "👀 View-only mode: sign in to add or edit recipes.";
+    document.querySelector("header").after(banner);
   }
+  banner.style.display = editingAllowed ? "none" : "block";
 }
+
 async function handleSignIn(){
   if(!USING_FIREBASE){ 
     alert("Firebase disabled — set USING_FIREBASE=true to enable Auth."); 
