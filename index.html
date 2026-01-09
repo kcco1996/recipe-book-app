@@ -15,14 +15,70 @@
       position:sticky;top:0;z-index:10;background:rgba(15,17,21,.9);backdrop-filter: blur(6px);
       border-bottom:1px solid var(--border)
     }
-    .bar{
-      max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between
-    }
-    .title{display:flex;gap:10px;align-items:center;font-weight:700}
-    .title .logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--brand),var(--accent));display:inline-block}
-    .auth{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
-    .auth button{background:#1f2430;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}
-    .auth .email{opacity:.8}
+   /* HEADER: better mobile layout */
+.bar{
+  max-width:1100px;
+  margin:0 auto;
+  padding:12px 16px;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap; /* ✅ allow wrapping on small screens */
+}
+
+.title{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  font-weight:700;
+  min-width:180px;
+}
+.title .logo{
+  width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--brand),var(--accent));
+  display:inline-block
+}
+
+.auth{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color:var(--muted);
+  font-size:14px;
+  flex-wrap:wrap; /* ✅ buttons can wrap */
+  justify-content:flex-end;
+}
+
+.auth button{
+  background:#1f2430;
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:8px 10px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.auth .email{
+  opacity:.85;
+  max-width:55vw; /* ✅ stop email pushing everything off */
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* MOBILE: stack header in two rows */
+@media (max-width: 640px){
+  .bar{ align-items:flex-start; gap:10px; }
+  .title{ width:100%; }      /* row 1 */
+  .auth{ width:100%; justify-content:flex-start; } /* row 2 */
+
+  .auth .email{
+    width:100%;
+    max-width:100%;
+    order:0;
+  }
+}
     .wrap{max-width:1100px;margin:0 auto;padding:16px}
     .filters{
       display:grid;grid-template-columns:1fr 180px 180px 1fr auto;gap:10px;margin:12px 0 18px
@@ -35,8 +91,26 @@
     }
     .btn.secondary{background:#1f2430;border-color:var(--border);color:var(--text)}
     .btn.danger{background:var(--danger);border-color:#cc5252;color:#160a0a}
-    .chips{display:flex;flex-wrap:wrap;gap:6px}
-    .chip{padding:4px 8px;border-radius:999px;background:#1b2130;border:1px solid var(--border);font-size:12px;color:var(--muted)}
+    /* CHIPS: show all flags nicely, scroll on mobile */
+.chips{
+  display:flex;
+  gap:6px;
+  padding-bottom:6px;
+  overflow-x:auto;              /* ✅ swipe sideways */
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+
+.chip{
+  flex:0 0 auto;                /* ✅ prevents shrinking */
+  white-space:nowrap;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#1b2130;
+  border:1px solid var(--border);
+  font-size:12px;
+  color:var(--muted);
+}
     .grid{
       display:grid;grid-template-columns:repeat( auto-fill, minmax(240px,1fr) );gap:14px
     }
@@ -84,11 +158,23 @@
     .modal-actions{padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
     .hint{color:var(--muted);font-size:12px}
     .kebab{background:transparent;border:none;color:var(--muted);cursor:pointer}
-    @media (max-width:820px){
-      .filters{grid-template-columns:1fr 1fr 1fr 1fr auto}
-      .cols{grid-template-columns:1fr}
-      .modal-grid{grid-template-columns:1fr}
-    }
+  @media (max-width:820px){
+  .filters{
+    grid-template-columns:1fr 1fr;
+  }
+  #searchInput{ grid-column:1 / -1; }
+  #applianceFilter{ grid-column:1 / -1; }
+  #addBtn{ grid-column:1 / -1; }
+
+  .cols{grid-template-columns:1fr}
+  .modal-grid{grid-template-columns:1fr}
+}
+
+@media (max-width:480px){
+  .filters{
+    grid-template-columns:1fr; /* super small phones */
+  }
+}
 
     /* Slider styling */
 input[type="range"] {
@@ -553,7 +639,7 @@ function countrySet(recipes){
     el.country.innerHTML = `<option value="">All countries</option>` + countries.map(c=>`<option>${c}</option>`).join("");
     el.countriesList.innerHTML = countries.map(c=>`<option value="${c}"></option>`).join("");
     // chips
-    el.chips.innerHTML = countries.slice(0, 12).map(c=> `<span class="chip">${flagForCountry(c)} ${c}</span>`).join("");
+    el.chips.innerHTML = countries.map(c=> `<span class="chip">${flagForCountry(c)} ${c}</span>`).join("");
   }
 function cardHTML(r){
   const flag = flagForCountry(r.country);
