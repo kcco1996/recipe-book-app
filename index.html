@@ -679,6 +679,28 @@ function cardHTML(r){
     el.empty.style.display = list.length ? "none" : "block";
   }
 
+  // --- Persist filters + scroll so edits don't "reset" the view ---
+function captureFilterState(){
+  return {
+    q: el.search.value,
+    c: el.country.value,
+    t: el.type.value,
+    a: el.appliance.value,
+    scrollY: window.scrollY
+  };
+}
+
+function restoreFilterState(state){
+  if(!state) return;
+  el.search.value = state.q || "";
+  el.country.value = state.c || "";
+  el.type.value = state.t || "";
+  el.appliance.value = state.a || "";
+  applyFilters();
+  // Restore scroll after the DOM updates
+  requestAnimationFrame(()=> window.scrollTo(0, state.scrollY || 0));
+}
+
   function applyFilters(){
     const q = el.search.value.trim().toLowerCase();
     const c = el.country.value;
@@ -702,14 +724,21 @@ function cardHTML(r){
     renderGrid(filtered);
   }
 
-  async function loadAllRecipes(){
-    allRecipes = await store.list();
-    // sort by name
-    allRecipes.sort((a,b)=>a.name.localeCompare(b.name));
-    syncCountryFilters();
+async function loadAllRecipes({ preserveFilters = false } = {}){
+  const saved = preserveFilters ? captureFilterState() : null;
+
+  allRecipes = await store.list();
+  allRecipes.sort((a,b)=>a.name.localeCompare(b.name));
+
+  syncCountryFilters();
+
+  if(preserveFilters && saved){
+    // In case the country/type options were rebuilt, restore AFTER sync
+    restoreFilterState(saved);
+  } else {
     applyFilters();
   }
-
+}
   function openDrawer(r){
     current = r;
     el.d_name.textContent = r.name || "";
@@ -859,15 +888,28 @@ slider.oninput = () => {
     return { id: draftId || null, name, country, type, image, desc, method, ingredients, appliances, rating:0, notes:"" };
   }
 
-  async function saveModal(){
-    const data = collectModalData();
-    if(!data.name){ alert("Please enter a dish name."); return; }
-    if(!data.country){ alert("Please enter a country."); return; }
-    await store.upsert(data);
-    await loadAllRecipes();
-    el.modal.close();
-    if(current && current.id === data.id){ openDrawer(allRecipes.find(x=>x.id===data.id)); }
+async function saveModal(){
+  const data = collectModalData();
+  if(!data.name){ alert("Please enter a dish name."); return; }
+  if(!data.country){ alert("Please enter a country."); return; }
+
+  // Remember whether the drawer was open and what recipe it was showing
+  const wasDrawerOpen = el.drawer.classList.contains("open");
+  const previousId = current?.id || null;
+
+  await store.upsert(data);
+
+  // Reload but keep filters + scroll position
+  await loadAllRecipes({ preserveFilters: true });
+
+  el.modal.close();
+
+  // If you were editing the currently open recipe, keep you in that context
+  const reopened = allRecipes.find(x => x.id === (data.id || previousId));
+  if(reopened && wasDrawerOpen){
+    openDrawer(reopened); // keeps you in the same recipe detail view
   }
+}
 
   const migrateBtn = document.getElementById("migrateBtn");
 
