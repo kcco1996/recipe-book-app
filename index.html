@@ -932,7 +932,7 @@ migrateBtn.addEventListener("click", async ()=>{
   }
 
   alert(`Migrated ${localData.length} recipes to your Firestore account.`);
-  await loadAllRecipes();
+  await loadAllRecipes({ preserveFilters: true });
 });
 
   /*************
