@@ -215,10 +215,31 @@ input::placeholder{
   border-radius:12px;
   padding:12px;
 }
-    .drawer.open{transform: translateY(0)}
-    .drawer .inner{max-width:900px;margin:0 auto;padding:16px}
+  .drawer{
+  position:fixed;
+  inset: 0 0 auto 0;                 /* ✅ top aligned */
+  background: linear-gradient(180deg, rgba(7,19,13,.96), rgba(11,26,18,.98));
+  border-bottom:1px solid var(--border);
+  transform: translateY(-110%);      /* ✅ hidden above the screen */
+  transition:.28s ease;
+  z-index:20;
+  max-height:85vh;
+  overflow:auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+
+.drawer.open{
+  transform: translateY(0);          /* ✅ slides down into view */
+}
+   .drawer .inner{
+  max-width:900px;
+  margin:14px auto;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background: rgba(16,40,27,.55);
+}
     .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .section{background:#12151b;border:1px solid var(--border);border-radius:12px;padding:12px}
     h3{margin:6px 0 10px}
     table{width:100%;border-collapse:collapse}
     th, td{border-bottom:1px solid var(--border);padding:8px;text-align:left}
